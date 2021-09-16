@@ -52,8 +52,10 @@ class GRPCDataRuntime(BaseRuntime, ABC):
 
     def run_forever(self):
         """Start the `Grpclet`."""
+        self.logger.debug('run_forever GRPCDataRuntime')
         self._grpclet_task = self._loop.create_task(self._grpclet.start())
         self._loop.run_until_complete(self._grpclet_task)
+        self.logger.debug('run_forever complete GRPCDataRuntime')
 
     def teardown(self):
         """Close the `Grpclet` and `DataRequestHandler`."""
@@ -64,13 +66,18 @@ class GRPCDataRuntime(BaseRuntime, ABC):
         while self._pending_tasks and time.time() - start < 1.0:
             self._update_pending_tasks()
             time.sleep(0.1)
+        self.logger.debug('Stop loop GRPCDataRuntime')
         self._loop.stop()
+        self.logger.debug('close loop GRPCDataRuntime')
         self._loop.close()
-
+        self.logger.debug('super teardown GRPCDataRuntime')
         super().teardown()
+        self.logger.debug('complete teardown GRPCDataRuntime')
 
     async def _close_grpclet(self):
+        self.logger.debug('close grpclet GRPCDataRuntime')
         await self._grpclet.close()
+        self.logger.debug('cancel grpclet GRPCDataRuntime')
         self._grpclet_task.cancel()
 
     @staticmethod
@@ -95,10 +102,13 @@ class GRPCDataRuntime(BaseRuntime, ABC):
         """
 
         try:
+            print(f'is {ctrl_address} ready?', flush=True)
             response = Grpclet.send_ctrl_msg(ctrl_address, 'STATUS')
         except RpcError:
+            print(f'not ready {ctrl_address}', flush=True)
             return False
 
+        print(f'is {ctrl_address} ready!', flush=True)
         return True
 
     @staticmethod
@@ -123,9 +133,12 @@ class GRPCDataRuntime(BaseRuntime, ABC):
         :param kwargs: extra keyword arguments
         """
         try:
+            print(f'terminate {control_address}', flush=True)
             Grpclet.send_ctrl_msg(control_address, 'TERMINATE')
+            print(f'terminated {control_address}', flush=True)
         except RpcError:
             # TERMINATE can fail if the the runtime dies before sending the return value
+            print(f'terminated {control_address} with RpcError', flush=True)
             pass
 
     @staticmethod
@@ -146,11 +159,14 @@ class GRPCDataRuntime(BaseRuntime, ABC):
         """
         timeout_ns = 1000000000 * timeout if timeout else None
         now = time.time_ns()
+        print(f'wait_for_ready_or_shutdown {ctrl_address} at {now}', flush=True)
         while timeout_ns is None or time.time_ns() - now < timeout_ns:
             if shutdown_event.is_set() or GRPCDataRuntime.is_ready(ctrl_address):
+                print(f'wait_for_ready_or_shutdown {ctrl_address} is true', flush=True)
                 return True
             time.sleep(0.1)
 
+        print(f'wait_for_ready_or_shutdown {ctrl_address} is false', flush=True)
         return False
 
     async def _callback(self, msg: Message) -> None:
