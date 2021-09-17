@@ -428,6 +428,8 @@ class Flow(PostMixin, JAMLCompatible, ExitStack, metaclass=FlowType):
 
         if self.args.name and self.args.infrastructure == InfrastructureType.K8S:
             args.k8s_namespace = self.args.name
+        else:
+            args.k8s_namespace = None
         self._pod_nodes[GATEWAY_NAME] = PodFactory.build_pod(
             args, needs, self.args.infrastructure
         )
@@ -744,6 +746,8 @@ class Flow(PostMixin, JAMLCompatible, ExitStack, metaclass=FlowType):
 
         if self.args.name and self.args.infrastructure == InfrastructureType.K8S:
             args.k8s_namespace = self.args.name
+        else:
+            args.k8s_namespace = None
         op_flow._pod_nodes[pod_name] = PodFactory.build_pod(
             args, needs, self.args.infrastructure
         )
