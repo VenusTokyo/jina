@@ -12,6 +12,7 @@ from grpc import RpcError
 from jina.enums import OnErrorStrategy
 from jina.excepts import NoExplicitMessage, ChainedPodException, RuntimeTerminated
 from jina.helper import get_or_reuse_loop, random_identity
+from jina.logging.predefined import default_logger
 from jina.peapods.grpc import Grpclet
 from jina.peapods.runtimes.base import BaseRuntime
 from jina.peapods.runtimes.request_handlers.data_request_handler import (
@@ -102,13 +103,13 @@ class GRPCDataRuntime(BaseRuntime, ABC):
         """
 
         try:
-            print(f'is {ctrl_address} ready?', flush=True)
+            default_logger.debug(f'is {ctrl_address} ready?')
             response = Grpclet.send_ctrl_msg(ctrl_address, 'STATUS')
         except RpcError:
-            print(f'not ready {ctrl_address}', flush=True)
+            default_logger.debug(f'not ready {ctrl_address}')
             return False
 
-        print(f'is {ctrl_address} ready!', flush=True)
+        default_logger.debug(f'is {ctrl_address} ready!')
         return True
 
     @staticmethod
@@ -133,12 +134,12 @@ class GRPCDataRuntime(BaseRuntime, ABC):
         :param kwargs: extra keyword arguments
         """
         try:
-            print(f'terminate {control_address}', flush=True)
+            default_logger.debug(f'terminate {control_address}')
             Grpclet.send_ctrl_msg(control_address, 'TERMINATE')
-            print(f'terminated {control_address}', flush=True)
+            default_logger.debug(f'terminated {control_address}')
         except RpcError:
             # TERMINATE can fail if the the runtime dies before sending the return value
-            print(f'terminated {control_address} with RpcError', flush=True)
+            default_logger.debug(f'terminated {control_address} with RpcError')
             pass
 
     @staticmethod
@@ -159,14 +160,16 @@ class GRPCDataRuntime(BaseRuntime, ABC):
         """
         timeout_ns = 1000000000 * timeout if timeout else None
         now = time.time_ns()
-        print(f'wait_for_ready_or_shutdown {ctrl_address} at {now}', flush=True)
+        default_logger.debug(f'wait_for_ready_or_shutdown {ctrl_address} at {now}')
         while timeout_ns is None or time.time_ns() - now < timeout_ns:
             if shutdown_event.is_set() or GRPCDataRuntime.is_ready(ctrl_address):
-                print(f'wait_for_ready_or_shutdown {ctrl_address} is true', flush=True)
+                default_logger.debug(
+                    f'wait_for_ready_or_shutdown {ctrl_address} is true'
+                )
                 return True
             time.sleep(0.1)
 
-        print(f'wait_for_ready_or_shutdown {ctrl_address} is false', flush=True)
+        default_logger.debug(f'wait_for_ready_or_shutdown {ctrl_address} is false')
         return False
 
     async def _callback(self, msg: Message) -> None:
@@ -192,7 +195,7 @@ class GRPCDataRuntime(BaseRuntime, ABC):
             if self.args.on_error_strategy == OnErrorStrategy.THROW_EARLY:
                 raise
             if isinstance(ex, ChainedPodException):
-                # the error is print from previous pod, no need to show it again
+                # the error is default_logger.debug from previous pod, no need to show it again
                 # hence just add exception and propagate further
                 # please do NOT add logger.error here!
                 msg.add_exception()

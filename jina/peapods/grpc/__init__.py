@@ -6,6 +6,7 @@ import grpc
 from google.protobuf import struct_pb2
 
 from jina.logging.logger import JinaLogger
+from jina.logging.predefined import default_logger
 
 from jina.proto import jina_pb2_grpc, jina_pb2
 from jina.types.message import Message
@@ -87,15 +88,13 @@ class Grpclet(jina_pb2_grpc.JinaDataRequestRPCServicer):
         :param timeout: optional timeout for the request in seconds
         :returns: Empty protobuf struct
         """
-        print(
-            f'send ctrl message with command {command} to {pod_address} with timeout {timeout}',
-            flush=True,
+        default_logger.debug(
+            f'send ctrl message with command {command} to {pod_address} with timeout {timeout}'
         )
         stub = Grpclet._create_grpc_stub(pod_address, is_async=False)
         response = stub.Call(ControlMessage(command), timeout=timeout)
-        print(
-            f'Got response for ctrl message with command {command} to {pod_address} with timeout {timeout}',
-            flush=True,
+        default_logger.debug(
+            f'Got response for ctrl message with command {command} to {pod_address} with timeout {timeout}'
         )
         return response
 
